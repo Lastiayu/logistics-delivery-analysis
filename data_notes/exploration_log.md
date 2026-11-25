@@ -1,0 +1,34 @@
+# Data Exploration Log
+
+Each row records one check, its result, and the decision taken. Queries are
+in `sql/01_data_exploration.sql`.
+
+| # | Table | Check | Result | Issue? | Decision |
+|---|---|---|---|---|---|
+| 1 | orders | Total rows | 99,441 | No | None needed |
+| 2 | orders | Duplicate order_id | 99,441 rows, 99,441 distinct order_id | No | None needed |
+| 3 | orders | Orders by status | delivered 96,478; shipped 1,107; canceled 625; unavailable 609; invoiced 314; processing 301; created 5; approved 2 | No | Only delivered orders are used for delivery metrics; the 2,963 orders with other statuses are excluded |
+| 4 | orders | Delivered orders without a delivery date | 8 | Yes (minor) | Excluded from delivery metrics (96,470 orders analyzed) |
+| 5 | orders | Estimated delivery date time of day | All 99,441 at 00:00:00 (0 exceptions) | No | "Late" is defined by calendar date, ignoring time of day |
+| 6 | orders | Delivery days (purchase to delivery, calendar days) | n = 96,470; range 0 to 210 days; average 12.5; no negative values; 298 orders above 60 days (about 0.31%) | Yes (minor) | Extreme values kept as valid deliveries; median reported alongside the average |
+| 7 | orders | Date format validity | 0 invalid values in purchase, estimated, and delivered dates | No | None needed |
+| 8 | orders | Event order (approved, carrier, delivered) for 96,455 delivered orders with all three dates | Approved before purchase: 0; delivered before purchase: 0; carrier date before approval date: 1,350 (1.40%); delivered before carrier date: 23 (0.02%) | Yes (minor) | Approval and carrier dates are not used in any KPI, so these cases are documented only. Excluding the 23 orders whose delivered date is before the carrier date gives the same overall late rate (6.77%), so they are kept |
+| 9 | order_items | Key (order_id + order_item_id) | 112,650 rows, 112,650 distinct keys | No | None needed |
+| 10 | order_items | Orders with more than one seller | 1,275 of 96,478 delivered orders (about 1.32%) | Yes (minor) | Orders counted once per seller; overlap documented |
+| 11 | order_items | Orders with more than one product category | 723 of 96,478 delivered orders (about 0.75%) | Yes (minor) | Orders counted once per category; overlap documented |
+| 12 | order_items | Price and freight ranges | Price 0.85 to 6,735.00 (average 120.65), no zero or negative prices; freight 0.00 to 409.68, with 383 items (0.34%) at zero freight | No | None needed; price and freight are not used in the KPIs |
+| 13 | order_items, order_reviews | Column data types | price and freight_value stored as REAL (112,650 rows each); review_score stored as INTEGER (99,224 rows) | No | None needed; no casting required |
+| 14 | orders, order_items | Delivered orders without any item | 0 | No | Seller and category analysis covers all delivered orders |
+| 15 | order_reviews | review_id uniqueness | 99,224 rows; 98,410 distinct review_id; 98,673 distinct order_id | Yes | review_id is not unique and is not used as a key; order_id is the join key and one review per order is selected (row 16) |
+| 16 | order_reviews | Reviews per delivered order | 1 review: 95,307 orders; 2 reviews: 521; 3 reviews: 4 | Yes (minor) | 525 orders (about 0.54% of delivered orders) have more than one review; the latest review is kept |
+| 17 | order_reviews | Delivered orders without a review | 646 (about 0.67%) | Yes (minor) | Excluded from review score analysis only; Late Delivery Rate uses all delivered orders |
+| 18 | order_reviews | review_score values | Only scores 1 to 5 present (99,224 reviews): 1 = 11,424 (11.51%); 2 = 3,151 (3.18%); 3 = 8,179 (8.24%); 4 = 19,142 (19.29%); 5 = 57,328 (57.78%) | No | None needed; scores are concentrated at 4 and 5, which is kept in mind when interpreting score differences |
+| 19 | products | Delivered orders with an uncategorized product | 1,392 orders (about 1.4%); category is NULL for 610 of 32,951 products, no empty strings | Yes | Reported separately as "Uncategorized" |
+| 20 | products | Categories missing from the translation table | 2 categories had no English translation in the original data (pc_gamer, portateis_cozinha_e_preparadores_de_alimentos; 7 and 13 delivered orders). Manual translations were added; they were accidentally inserted twice, the duplicates were removed, and a unique index now prevents repeats. The table now has 73 rows with 73 distinct category names | Yes (minor) | Translated manually (not part of the original dataset); both categories are below the minimum sample size and are not ranked; setup saved in sql/00_setup_translations.sql |
+| 21 | customers | customer_id vs customer_unique_id | 99,441 rows; 99,441 distinct customer_id; 96,096 distinct customer_unique_id | Yes (minor) | customer_id is created per order, and some customers ordered more than once; the analysis is at order level, so customer_id is only used to link orders to the customer's state |
+| 22 | customers, sellers | State codes | Customers: 27 distinct states; sellers: 23 distinct states; all codes are two uppercase letters | No | None needed |
+| 23 | all | Orphan rows | 0 in all five checks (orders without customer; items without order, product, or seller; reviews without order) | No | None needed; joins are safe |
+| 24 | all | Missing values per column | 13 columns in 3 tables contain missing values; no empty strings (all missing values are NULL). Used columns affected: order_delivered_customer_date (2,965 NULL; 2.98%) and product_category_name (610 products; 1.85%). The 610 products with a missing category are the same products that are missing product name length, description length, and photo count. Unused columns: review comment title and message (88.34% and 58.73%), approval and carrier dates, weight and dimensions | Yes | Missing delivery dates handled by filtering on delivered status and a non-null delivery date; products without a category are reported as "Uncategorized"; unused columns are documented and ignored |
+| 25 | orders | Monthly volume of delivered orders | 2016-09: 1; 2016-10: 265; 2016-12: 1; none in 2016-11; 750 to 7,289 per month from 2017-01 to 2018-08; delivered orders end in 2018-08; order dates across all statuses range from 2016-09-04 to 2018-10-17 | Yes | Trend analysis covers January 2017 to August 2018 |
+| 26 | orders | Delivery date by order status | 96,470 delivered and 6 canceled orders have a delivery date; 8 delivered and 2,957 non-delivered orders have none | Yes (minor) | Filter on both status = 'delivered' and a non-null delivery date; the 6 canceled orders with a delivery date are excluded |
+| 27 | all | Keys and indexes | Imported tables have no primary keys or indexes; joins without indexes were very slow | Yes (minor) | Indexes created on join columns; results are unchanged |
