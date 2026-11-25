@@ -76,7 +76,9 @@ The dataset has 99,441 orders. Of these, 96,478 have status `delivered`, and
 96,470 of them have a recorded delivery date. Only these 96,470 orders are
 used to calculate delivery metrics. The remaining 2,971 orders (about 3.0%)
 are excluded: 2,963 orders that are not delivered and 8 delivered orders with
-no delivery date. Monthly analysis is based on the order purchase date.
+no delivery date. Six canceled orders do have a delivery date; they are also
+excluded because their status is not `delivered`. Monthly analysis is based
+on the order purchase date.
 
 ### 3.2 Definition of "Late"
 An order is late when its delivered date is after its estimated delivery date,
@@ -95,8 +97,7 @@ Both are calculated as whole calendar days between dates, consistent with the
 date-based definition of "late". Delivery times range from 0 to 210 days, with
 no negative values. 298 orders (about 0.31%) took more than 60 days. These
 are retained because they are valid recorded deliveries and part of the late
-delivery problem; because extreme values can affect an average, the median is
-reported alongside the average.
+delivery problem.
 
 ### 3.4 Unit of Analysis
 One row = one order for all metrics. For seller and category analysis, orders
