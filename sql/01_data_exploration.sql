@@ -1,23 +1,21 @@
--- =============================================================================
+-- ===========================================================================================================================================
 -- 01_data_exploration.sql
 -- Data exploration queries for the delivery performance analysis (SQLite).
 --
 -- Labels (L1, L2, ...) match the row numbers in data_notes/exploration_log.md.
--- Labels starting with T relate to the minimum sample size and reporting
--- thresholds in docs/business_questions_and_kpis.md.
+-- Labels starting with T relate to the minimum sample size and reporting thresholds in docs/business_questions_and_kpis.md.
 --
 -- Before running:
 --   1. Import the CSV files into SQLite (one table per file).
 --   2. Run sql/00_setup_indexes.sql and sql/00_setup_translations.sql.
 --
--- Run one query at a time. Results noted in "Result" comments were recorded
--- when the analysis was done and can be used to check a re-run.
--- =============================================================================
+-- Run one query at a time. Results noted in "Result" comments were recorded when the analysis was done and can be used to check a re-run.
+-- ===========================================================================================================================================
 
 
--- =============================================================================
+-- ===========================================================================================================================================
 -- SECTION A: TABLE INVENTORY
--- =============================================================================
+-- ===========================================================================================================================================
 
 -- A1: Row count per table
 -- Result: orders 99,441 | customers 99,441 | order_items 112,650 |
@@ -35,9 +33,9 @@ UNION ALL SELECT 'product_category_translation', COUNT(*) FROM product_category_
 PRAGMA table_info(orders);
 
 
--- =============================================================================
+-- ===========================================================================================================================================
 -- SECTION B: KEYS, DUPLICATES, AND DATA TYPES
--- =============================================================================
+-- ===========================================================================================================================================
 
 -- L1: Total orders
 -- Result: 99,441
@@ -80,9 +78,9 @@ SELECT 'order_reviews.review_score', typeof(review_score), COUNT(*)
 FROM order_reviews GROUP BY typeof(review_score);
 
 
--- =============================================================================
+-- ===========================================================================================================================================
 -- SECTION C: ORDER STATUS, DATES, AND DELIVERY TIMES
--- =============================================================================
+-- ===========================================================================================================================================
 
 -- L3: Orders by status
 -- Result: delivered 96,478 | shipped 1,107 | canceled 625 | unavailable 609 |
@@ -190,9 +188,9 @@ WHERE order_status = 'delivered'
            AND order_delivered_customer_date < order_delivered_carrier_date);
 
 
--- =============================================================================
+-- ===========================================================================================================================================
 -- SECTION D: ORDER ITEMS, SELLERS, AND PRODUCT CATEGORIES
--- =============================================================================
+-- ===========================================================================================================================================
 
 -- L10: Delivered orders with more than one seller
 -- Result: 1,275 (about 1.32% of 96,478 delivered orders)
@@ -282,9 +280,9 @@ SELECT COUNT(*) AS total_rows,
 FROM product_category_translation;
 
 
--- =============================================================================
+-- ===========================================================================================================================================
 -- SECTION E: REVIEWS
--- =============================================================================
+-- ===========================================================================================================================================
 
 -- L16: Number of reviews per delivered order (orders with at least one review)
 -- Result: 1 review 95,307 orders | 2 reviews 521 | 3 reviews 4
@@ -327,9 +325,9 @@ GROUP BY review_score
 ORDER BY review_score;
 
 
--- =============================================================================
+-- ===========================================================================================================================================
 -- SECTION F: CUSTOMERS, SELLERS, AND REFERENTIAL INTEGRITY
--- =============================================================================
+-- ===========================================================================================================================================
 
 -- L22: State codes in customers and sellers
 -- Result: customers 27 distinct states | sellers 23 distinct states |
@@ -368,14 +366,13 @@ SELECT
    WHERE o.order_id IS NULL) AS reviews_without_order;
 
 
--- =============================================================================
+-- ===========================================================================================================================================
 -- SECTION G: MISSING VALUES AND INDEXES
--- =============================================================================
+-- ===========================================================================================================================================
 
 -- L24: Missing values per column
--- Calculated for all columns of all tables with a Python script (pandas and
--- sqlite3) because the table has many columns. Result: 13 columns in 3 tables
--- have missing values; all missing values are NULL, none are empty strings.
+-- Calculated for all columns of all tables with a Python script (pandas and sqlite3) because the table has many columns. Result: 13 columns in 
+-- 3 tables have missing values; all missing values are NULL, none are empty strings.
 -- The two checks below support the findings for the columns that are used.
 
 -- L24a: Number of NULL delivery dates (also see L4 and L26)
@@ -392,9 +389,9 @@ WHERE type = 'index' AND name LIKE 'idx_%'
 ORDER BY tbl_name, name;
 
 
--- =============================================================================
+-- ===========================================================================================================================================
 -- SECTION H: TIME COVERAGE
--- =============================================================================
+-- ===========================================================================================================================================
 
 -- L25a: Monthly volume of delivered orders (by purchase month)
 -- Result: 23 months from 2016-09 to 2018-08; 2016-09: 1, 2016-10: 265,
@@ -412,9 +409,9 @@ SELECT MIN(order_purchase_timestamp) AS first_purchase_all,
 FROM orders;
 
 
--- =============================================================================
+-- ===========================================================================================================================================
 -- SECTION I: MINIMUM SAMPLE SIZE (supports docs/business_questions_and_kpis.md)
--- =============================================================================
+-- ===========================================================================================================================================
 
 -- T3: Orders per customer state (delivered orders), smallest first
 -- Result: RR 41 | AP 67 | AC 80 | AM 145 | all other states 200 or more;
