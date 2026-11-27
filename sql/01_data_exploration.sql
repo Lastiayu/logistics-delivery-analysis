@@ -506,3 +506,54 @@ UNION ALL
 SELECT 'month (>=500)', COUNT(*), SUM(n >= 500),
        SUM(CASE WHEN n >= 500 THEN n ELSE 0 END)
 FROM m;
+
+-- ===========================================================================================================================================
+-- SECTION J: RELATIONSHIP CHECKS (supports the ERD and data dictionary)
+-- ===========================================================================================================================================
+
+-- R1: customer_id used by more than one order
+-- Result: 0
+SELECT COUNT(*) AS customer_ids_used_more_than_once
+FROM (SELECT customer_id FROM orders GROUP BY customer_id HAVING COUNT(*) > 1);
+
+-- R2: Items per order (orders that have at least one item)
+-- Result: minimum 1, maximum 21
+SELECT MIN(n) AS min_items, MAX(n) AS max_items
+FROM (SELECT order_id, COUNT(*) AS n FROM order_items GROUP BY order_id);
+
+-- R3: Reviews per order, including orders with no review (all statuses)
+-- Result: 0 reviews 768 | 1 review 98,126 | 2 reviews 543 | 3 reviews 4
+SELECT n_reviews, COUNT(*) AS orders
+FROM (
+  SELECT o.order_id, COUNT(r.review_id) AS n_reviews
+  FROM orders o
+  LEFT JOIN order_reviews r ON r.order_id = o.order_id
+  GROUP BY o.order_id
+)
+GROUP BY n_reviews
+ORDER BY n_reviews;
+
+-- R4: Products and sellers in order_items vs. their own tables
+-- Result: 32,951 of 32,951 products and 3,095 of 3,095 sellers appear in order_items
+SELECT (SELECT COUNT(DISTINCT product_id) FROM order_items) AS products_in_items,
+       (SELECT COUNT(*) FROM products) AS products_total,
+       (SELECT COUNT(DISTINCT seller_id) FROM order_items) AS sellers_in_items,
+       (SELECT COUNT(*) FROM sellers) AS sellers_total;
+
+-- R5: Products with a category but no translation
+-- Result: 0
+SELECT COUNT(*) AS products_without_translation
+FROM products p
+LEFT JOIN product_category_translation t
+  ON p.product_category_name = t.product_category_name
+WHERE p.product_category_name IS NOT NULL
+  AND t.product_category_name IS NULL;
+
+-- R6: Orders without any item, by status
+-- Result: unavailable 603 | canceled 164 | created 5 | invoiced 2 | shipped 1
+--         (775 orders, none delivered)
+SELECT o.order_status, COUNT(*) AS orders_without_items
+FROM orders o
+WHERE NOT EXISTS (SELECT 1 FROM order_items oi WHERE oi.order_id = o.order_id)
+GROUP BY o.order_status
+ORDER BY orders_without_items DESC;
